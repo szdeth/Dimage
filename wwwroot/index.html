@@ -1,0 +1,388 @@
+﻿<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8" />
+    <script src="jquery.min.js" type="text/javascript"></script>
+    <title>简易管理页</title>
+    <style>
+        html, body {
+            padding: 0 0;
+            margin: 0 0;
+            font: normal 16px 'MicroSoft YaHei',"Times New Roman",Georgia,Serif;
+            min-height: 100vh;
+        }
+
+        a:link, a:visited, a:hover, a:active {
+            text-decoration: none;
+        }
+
+        body {
+            background-color: #202020;
+        }
+
+        ul, li, dl, dt, dd {
+            margin: 0;
+            padding: 0;
+            list-style-type: none;
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            background-color: rgba(0,0,0,.5);
+            color: #fff;
+        }
+
+        main {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        .page-login {
+            display: flex;
+            flex-direction: row;
+            align-self: flex-end;
+        }
+
+            .page-login li {
+                padding: .5em .5em;
+            }
+
+        .page-upload {
+            padding: 1em 2em;
+            width: calc(100% - 4em);
+        }
+
+            .page-upload button {
+                width: 8em;
+                height: 3em;
+            }
+
+        .page-image {
+            margin: 1em;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255,255,255,.2);
+            color: #888;
+            border-radius: .5em;
+        }
+
+            .page-image:hover {
+                background-color: rgba(255,255,255,.5);
+            }
+
+            .page-image img {
+                max-width: 150px;
+                max-height: 150px;
+            }
+
+            .page-image .image-link {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+                width: 100%;
+            }
+
+                .page-image .image-link a {
+                    padding: .5em 0;
+                    font-size: 1.25em;
+                    color: #fff;
+                }
+
+            .page-image button {
+                padding: 0 1em;
+                font-size: 1.25em;
+            }
+
+        .page-pop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0,0,0,.2);
+            backdrop-filter: blur(5px);
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+            .page-pop .pop-text {
+                padding: 2em;
+                font-size: 3em;
+                color: #202020;
+                background-color: #fefefe;
+                border-radius: .5em;
+            }
+
+            .page-pop .pop-close {
+                background: #f635;
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+            }
+
+            .page-pop .pop-image {
+                padding: 1em 1em;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background-color: #fefefe;
+                min-width: 640px;
+                min-height: 480px;
+                max-width: 60vw;
+                max-height: 60vh;
+                border-radius: .5em;
+            }
+
+                .page-pop .pop-image .image-box {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-grow: 1;
+                    width: 100%;
+                }
+
+                    .page-pop .pop-image .image-box img {
+                        max-width: 100%;
+                        max-height: 40vh;
+                    }
+
+                .page-pop .pop-image .pop-items {
+                    padding: 1em 1em;
+                    width: 100%;
+                }
+
+                    .page-pop .pop-image .pop-items .pop-item {
+                        padding: 4px 0;
+                        display: flex;
+                        width: 100%;
+                    }
+
+                        .page-pop .pop-image .pop-items .pop-item input {
+                            flex-grow: 1;
+                        }
+
+                        .page-pop .pop-image .pop-items .pop-item select {
+                            flex-grow: 1;
+                        }
+
+                        .page-pop .pop-image .pop-items .pop-item button {
+                            padding: 0 2em;
+                            margin: 1em 2em;
+                            height: 3em;
+                        }
+    </style>
+</head>
+<body>
+    <header>
+        <ul class="page-login" style="display:none;">
+            <li>
+                <label>用户名</label>
+                <input id="username" type="text" />
+            </li>
+            <li>
+                <label>密码</label>
+                <input id="pwd" type="password" />
+            </li>
+            <li>
+                <button id="btn_login">登录</button>
+            </li>
+        </ul>
+        <div class="page-upload" style="display:none;">
+            <input id="upfile" type="file" accept="image/*" multiple />
+            <button id="uploadfile">上传按键</button>
+        </div>
+    </header>
+    <main>
+    </main>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $.post({
+                url: 'image/check',
+                dataType: 'json',
+                contentType: "application/json",
+                data: JSON.stringify({
+                    token: localStorage.getItem('token')
+                }), complete: xhr => {
+                    let res = xhr.responseJSON;
+                    console.log('[检查登录状态]', res);
+                    if (res.error == 0) {
+                        $('.page-login').hide();
+                        $('.page-upload').show();
+                        let token = localStorage.getItem('token');
+                        $.get({
+                            url: 'image/' + token + "/list",
+                            success: res => {
+                                console.log('[获取的图片列表]', res);
+                                for (let i in res) {
+                                    let item = res[i];
+                                    let fxstr = ['不分享', '公开分享', '限时分享', '白名单', '黑名单',]
+                                    let dv = new Date();
+                                    let dd = dv.getFullYear() + '-' +
+                                        (dv.getMonth() >= 9 ? dv.getMonth() + 1 : '0' + (dv.getMonth() + 1)) + '-' +
+                                        (dv.getDate() > 9 ? dv.getDate() : '0' + dv.getDate());
+                                    let strvalue = '';
+                                    for (let x in item.filter) {
+                                        if (strvalue != '') { strvalue += ','; }
+                                        strvalue += item.filter[x];
+                                    }
+                                    $('<div class="page-image">')
+                                        .append($('<img>').attr({ "src": item.src }))
+                                        .append($('<div class="image-link">')
+                                            .append(function () {
+                                                if (item.share == 0) {
+                                                    $('<a>未分享图片</a>')
+                                                        .attr({ "href": "javascript:;" })
+                                                        .appendTo($(this));
+                                                } else {
+                                                    $('<a>原图</a>')
+                                                        .attr({ "href": document.location.protocol + '//' + item.img, "target": "_blank" })
+                                                        .appendTo($(this));
+                                                }
+                                            })
+                                            .append(function () {
+                                                if (item.share == 0) {
+                                                } else {
+                                                    $('<a>缩略图</a>')
+                                                        .attr({ "href": document.location.protocol + '//' + item.thumb, "target": "_blank" })
+                                                        .appendTo($(this));
+                                                }
+                                            }))
+                                        .append($('<button>设置</button>').click(function () {
+                                            let $pop = $('<div class="page-pop">')
+                                                .append($('<div class="pop-close">').click(function () {
+                                                    $pop.remove();
+                                                }))
+                                                .append($('<div class="pop-image">')
+                                                    .append('<div class="image-box"><img src="' + item.prv + '" /></div>')
+                                                    .append($('<div class="pop-items">')
+                                                        .append('<div class="pop-item"><label>外部连接：</label>' +
+                                                            '<input type="text" readonly value="' +
+                                                            document.location.protocol + '//' + item.img + '" /></div>')
+                                                        .append($('<div class="pop-item">')
+                                                            .append('<label>分享设置：</label>')
+                                                            .append($('<select id="pop_share">').append(function () {
+                                                                for (let i in fxstr) {
+                                                                    if (i == item.share) {
+                                                                        $(this).append('<option selected>' + fxstr[i] + '</option>');
+                                                                    } else {
+                                                                        $(this).append('<option>' + fxstr[i] + '</option>');
+                                                                    }
+                                                                }
+                                                            })))
+                                                        .append('<div class="pop-item"><label>限制日期：</label>' +
+                                                            '<input id="pop_date" type="date" value="' + dd + '" /></div>')
+                                                        .append('<div class="pop-item"><label>设置名单：</label>' +
+                                                            '<input id="pop_strvalue" type="text" value="' + strvalue +
+                                                            '" placeholder="多个域名以 , 分开" /></div>')
+                                                        .append($('<div class="pop-item" style="justify-content:center;">')
+                                                            .append($('<button>保存修改</button>').click(function () {
+                                                                $.post({
+                                                                    url: 'image/set',
+                                                                    dataType: 'json',
+                                                                    contentType: "application/json",
+                                                                    data: JSON.stringify({
+                                                                        token: localStorage.getItem('token'),
+                                                                        pid: item.pid,
+                                                                        share: $('select#pop_share')[0].options.selectedIndex,
+                                                                        timeout: $('#pop_date').val(),
+                                                                        filter: $('#pop_strvalue').val()
+                                                                    }), success: res => {
+                                                                        console.log('[set-image]', res);
+                                                                        if (res.error == 0) {
+                                                                            location.reload();
+                                                                        } else { console.log('[修改失败]'); }
+                                                                    }
+                                                                })
+                                                            }))
+                                                            .append($('<button style="background-color: #f63;color:#fff;">删除</button>').click(function () {
+                                                                $.post({
+                                                                    url: 'image/del',
+                                                                    dataType: 'json',
+                                                                    contentType: "application/json",
+                                                                    data: JSON.stringify({
+                                                                        token: localStorage.getItem('token'),
+                                                                        pid: item.pid
+                                                                    }), success: res => {
+                                                                        if (res.error == 0) {
+                                                                            location.reload();
+                                                                        } else { console.log('[删除失败]'); }
+                                                                    }
+
+                                                                })
+                                                            }))
+                                                        )
+                                                    ));
+                                            $('body').append($pop);
+                                        })).appendTo($('main'));
+                                }
+                            }
+                        })
+                    } else {
+                        $('.page-login').show();
+                        $('.page-upload').hide();
+                    }
+                }
+            })
+            $('#btn_login').click(() => {
+                let usr = $('#username').val();
+                let pwd = $('#pwd').val();
+                if (usr != '' || pwd != '') {
+                    $.post({
+                        url: 'image/login',
+                        dataType: 'json',
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            username: usr,
+                            password: pwd
+                        }), success: res => {
+                            console.log('[POST-login]', res);
+                            if (res.error == 0) {
+                                localStorage.setItem("token", res.token)
+                                location.reload();
+                            }
+                        }
+                    })
+                } else { console.log('[用户名或密码为空]'); }
+            })
+            $('#uploadfile').click(() => {
+                var formdata = new FormData();
+                var files = $('#upfile').get(0).files;
+                if (files.length > 0) {
+                    for (let i in files) {
+                        formdata.append(i.toString(), files[i]);
+                    }
+                    $('<div class="page-pop"><div class="pop-text">上传中</div></div>').appendTo($('body'));
+                    var token = localStorage.getItem('token');
+                    $.post({
+                        url: 'image/' + token + '/upload',
+                        contentType: false,
+                        cache: false,
+                        currentType: false,
+                        processData: false,
+                        data: formdata,
+                        success: function (res) {
+                            console.log('[upload_files]', res);
+                            if (res.error == 0) {
+                                location.reload();
+                            } else {
+                                $('.pop-text').text('上传失败');
+                            }
+                        }
+                    });
+                } else { console.log('[没有选择文件]'); }
+            })
+        })
+    </script>
+</body>
+</html>
